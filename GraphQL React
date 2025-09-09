@@ -1,0 +1,10 @@
+npm install @apollo/client graphql
+@apollo/client: ^4.0.4 ✅
+graphql: ^16.11.0 ✅
+No errors found - all linter checks pass!
+To use GraphQL:
+Start the backend (with GraphQL dependencies)
+Start the frontend
+Navigate to "GraphQL Demo" in the sidebar
+See tweets fetched via GraphQL instead of REST
+The GraphQL endpoint will be available at http://localhost:5454/graphql and the frontend will automatically use it when you visit the GraphQL Demo page. All existing REST functionality continues to work normally.
