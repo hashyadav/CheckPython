@@ -1,0 +1,61 @@
+Security model
+• Authentication (login/register): Handled by Laravel Breeze. Controllers under App\Http\Controllers\Auth\... manage login, registration, email verification, logout. Passwords are hashed automatically via the casts() in app/Models/User.php.
+• Authorization (roles): Routes are grouped by role with middleware. In routes/web.php:
+Admin-only: Route::middleware(['auth','role:admin']) guards /admin, subjects CRUD, assignments, retakes management.
+Student-only: Route::middleware(['auth','role:student']) guards /quizzes, /results, retake request.
+Shared pages (e.g., leaderboard, certificates.show) use auth.
+The alias for role middleware is registered in bootstrap/app.php.
+• Session + CSRF: Laravel sessions protect logged-in state; Blade forms include CSRF tokens automatically via @csrf. CSRF validation is default in Laravel.
+• Input validation: Every write path validates request data:
+Subjects/Questions: AdminController@store, @update, @storeQuestion, @updateQuestion
+Assignments: AdminController@assign
+Registration: RegisteredUserController@store
+• Per-resource ownership checks:
+Quiz start/submit requires the subject be assigned to the current student in QuizController@start/@submit.
+Review page ensures the result belongs to the current student in QuizController@review.
+• XSS protection: Blade escapes variables ({{ }}) by default; only explicit {!! !!} would bypass, which isn’t used for user content.
+• Mass-assignment safety: Models whitelist fields using $fillable (e.g., User, Subject, Question, Result, Answer).
+• Email verification: The /dashboard route uses verified middleware to require email verification.
+• Soft deletes: Subject uses soft deletes; only non-deleted questions are served to students.
+• Error handling/redirects: Unauthorized/Forbidden actions use middleware or abort(403).
+Core features: how they work
+• Admin dashboard (/admin):
+AdminController@index loads subjects (with question counts), student count, and recent results, then renders resources/views/admin/dashboard.blade.php.
+• Subjects & Questions management:
+Create/update/delete/restore via AdminController methods. Questions store options and correct_answers arrays; “soft delete” toggles is_deleted.
+• Assignments (/assignments):
+Admin selects students and subjects; AdminController@assign creates Assignment records. The UI is in resources/views/admin/assignments/index.blade.php.
+• Student quiz list (/quizzes):
+QuizController@index shows subjects assigned to the logged-in student.
+• Start quiz (/quizzes/{subject}):
+QuizController@start checks assignment, fetches 10 random not-deleted questions, renders resources/views/student/quizzes/start.blade.php with a timer and navigation.
+• Submit quiz (POST /quizzes/{subject}/submit):
+QuizController@submit:
+Validates assignment again.
+Compares chosen options vs exact correct_answers.
+Awards 1 point per fully-correct question.
+Computes percentage, saves a Result with quiz_date, then saves each Answer (selected options, correctness, incorrect options).
+Builds a review payload and shows student.quizzes.review.
+• Results (/results):
+QuizController@results lists all results for the current student (subject, score, percentage, date). The UI is resources/views/student/results/index.blade.php.
+• Review (/results/{result}/review):
+QuizController@review ensures ownership, loads answers+questions, shows detailed per-question correctness.
+• Certificates (/certificates/{result}):
+CertificateController@show renders resources/views/certificates/show.blade.php. PDF export leverages mpdf/mpdf (installed in composer.json).
+• Leaderboard (/leaderboard):
+LeaderboardController@index aggregates and shows ranked performance in resources/views/leaderboard/index.blade.php.
+• Retake requests:
+Students can request retakes; admins manage them via RetakeController and related views.
+Data model (simplified)
+• User (role: admin/student)
+• Subject has many Question (active = is_deleted=false)
+• Assignment (student_id, subject_id)
+• Result (student_id, subject_id, score, percentage, quiz_date) has many Answer
+• Answer (result_id, question_id, selected_options[], is_correct, incorrect_options[])
+• QuizRetakeRequest (student_id, subject_id, status, timestamps)
+Libraries used
+• Backend: Laravel 12, Tinker
+• PDF: mpdf/mpdf
+• Auth scaffolding/dev: Laravel Breeze, PHPUnit, Pint
+• Frontend: Tailwind CSS, Alpine.js, Vite, Axios
+If you want, I can generate a one-page cheat sheet you can present, with route-to-controller-to-view mappings and a small diagram of the data flow.
