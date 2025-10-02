@@ -1,0 +1,65 @@
+Here’s a simple, practical view of how Models and Views work in your app.
+Models (data layer)
+Purpose: Represent database tables as PHP classes and provide relationships + casting.
+Key models:
+User: authenticatable user with role (admin/student). Fillable: name, username, email, password, role. Password hashing via casts().
+Subject: quiz topics. SoftDeletes enabled. Relation: hasMany questions() filtered by is_deleted=false.
+Question: belongs to subject. Stores options[] and correct_answers[] with casts to array. Flag is_deleted.
+Assignment: links student_id ↔ subject_id (who can take what).
+Result: quiz attempt summary. Fillable: student_id, subject_id, score, percentage, quiz_date (casts: floats, datetime). Relations: belongsTo student(), subject(); hasMany answers().
+Answer: per-question response for a result. Stores selected_options[], is_correct, incorrect_options[] (casts to arrays/bool). Relations: belongsTo result(), question().
+QuizRetakeRequest: retake workflow (student, subject, status, timestamps).
+Typical model usage patterns:
+Retrieval: Eloquent queries (e.g., Subject::withTrashed()->withCount('questions')->get()).
+Relations: $result->student, $result->subject, $result->answers.
+Casting: arrays/datetime auto-converted when reading/writing.
+Validation before create/update: controllers validate request, then Model::create([...]).
+Mass assignment: guarded by $fillable to prevent accidental writes.
+Views (presentation layer)
+Purpose: Blade templates render HTML using data the controllers pass.
+Layouts:
+resources/views/layouts/app.blade.php: base app shell for authenticated pages; includes navigation, top header slot, main content slot, Vite assets.
+resources/views/layouts/admin.blade.php: admin-themed shell with a top navbar and logout button for admin area.
+Page views:
+Admin: admin/dashboard.blade.php (stats, recent results), admin/assignments/index.blade.php (assign subjects to students), admin subjects/questions views (create/edit).
+Student: student/quizzes/index.blade.php (assigned quizzes), student/quizzes/start.blade.php (quiz-taking UI, navigation, timer), student/results/index.blade.php (results list), student/quizzes/review.blade.php (per-question review).
+Shared: leaderboard/index.blade.php, certificates/show.blade.php.
+Components/partials:
+components/* (e.g., dropdown, dropdown-link, buttons). Reused UI pieces.
+layouts/navigation.blade.php: top navigation with role-aware links and logout dropdown.
+How controllers connect models to views
+Controller fetches/creates data via models → passes compact(...) to a view → Blade renders.
+Example: Admin dashboard
+Controller: AdminController@index
+Fetches $subjects (with question counts), $studentsCount, $recentResults
+return view('admin.dashboard', compact('subjects','studentsCount','recentResults'))
+View: admin/dashboard.blade.php
+Uses Blade directives like @foreach($subjects as $subject) to render cards
+Example flow (student taking a quiz)
+Controller: QuizController@start(Subject $subject)
+Verifies Assignment exists for current student
+Loads 10 random active Question models
+return view('student.quizzes.start', compact('subject','questions'))
+View: student/quizzes/start.blade.php
+Loops over $questions to display question text and options
+Posts answers back to QuizController@submit
+Controller: QuizController@submit
+Reads answers from request
+Uses Question models to compare selected vs correct_answers
+Creates Result model + Answer models
+Returns review view with computed data
+View: student/quizzes/review.blade.php
+Shows $percentage and per-question correctness using $review array
+Blade essentials used
+Output: {{ $var }} (escaped), {!! !!} (not used for user content)
+Loops/conditionals: @foreach, @if
+Slots/sections: <x-app-layout> with <x-slot name="header">, then {{ $slot }}
+Components: <x-dropdown>, <x-responsive-nav-link>, etc.
+CSRF tokens: @csrf in forms
+Route helpers: route('results.index'), route('quizzes.submit', $subject)
+Why this is clean
+MVC separation: Models handle data, Controllers handle orchestration/validation, Views render UI.
+Relationships mean less manual joins and cleaner view code.
+Casting keeps arrays/datetimes ergonomic in PHP and JSON.
+Blade templates make UI readable and reusable with components/layouts.
+If you want, I can generate a one-page “route → controller → models → view” mapping for your top user flows (Admin dashboard, Assignments, Quiz start/submit, Results/Review) to use directly in your presentation.
