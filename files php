@@ -1,0 +1,36 @@
+Key Laravel files (besides controllers/models/views)
+routes/web.php: Defines all URLs and maps them to controllers. Also applies middleware like auth and role.
+app/Http/Middleware/RoleMiddleware.php: Enforces role-based access (admin vs student). Aliased as role in bootstrap/app.php.
+app/Providers/RouteServiceProvider.php: Route bootstrapping.
+resources/views/layouts/app.blade.php: Main authenticated layout. Injects assets via @vite(['resources/css/app.css', 'resources/js/app.js']).
+resources/views/layouts/admin.blade.php: Admin layout shell with admin navbar.
+resources/views/layouts/navigation.blade.php: Top navigation bar (links by role, logout dropdown).
+resources/views/components/: Reusable UI components (buttons, dropdowns, inputs, etc.).
+database/migrations/: Tables for users, subjects, questions, assignments, results, answers, retake requests.
+config/: App, auth, database, cache, session, mail, queue config.
+PDF/Certificate
+resources/views/certificates/show.blade.php: Certificate HTML (also used for print/PDF).
+composer.json includes mpdf/mpdf: Backend library for PDF generation.
+Retakes & Leaderboard
+app/Http/Controllers/RetakeController.php: Request/approve/decline retakes.
+app/Http/Controllers/LeaderboardController.php: Ranks/aggregates results.
+resources/views/leaderboard/index.blade.php: Leaderboard UI.
+Where NPM files are used
+package.json: Declares frontend dependencies and scripts.
+dev: Runs Vite dev server (hot reloading).
+build: Builds production assets to public/build.
+resources/js/app.js: Entry JS; imports Alpine.js, Axios, and bootstrap.js; executed on every page via @vite.
+resources/js/bootstrap.js: Configures Axios defaults, CSRF header, etc.
+resources/css/app.css: Global styles; Tailwind and custom CSS live here; built by Vite.
+tailwind.config.js: Tailwind scanning config; tells Tailwind where to look for class names in Blade/JS.
+postcss.config.js: PostCSS pipeline (Tailwind + Autoprefixer).
+vite.config.js: Vite build settings for Laravel (laravel-vite-plugin).
+resources/views/layouts/app.blade.php: Injects compiled CSS/JS via @vite([...]) so every page gets your Tailwind CSS and Alpine.js.
+public/build/assets/: Output from npm run build (hashed CSS/JS served in production by Vite manifest).
+How the frontend pipeline ties in
+During development: npm run dev starts Vite. @vite in Blade injects the dev server assets for fast reload.
+For production: npm run build compiles resources/css/app.css and resources/js/app.js into optimized files in public/build. @vite then loads those fingerprinted assets.
+Alpine.js: Used for lightweight interactivity in views/components (e.g., dropdowns using x-data, x-show).
+Tailwind CSS: Utility classes used across Blade templates (admin dashboard cards, buttons, grids, spacing).
+Axios: Available if you add API calls; CSRF header pre-configured in resources/js/bootstrap.js.
+If you want, I can generate a quick map like: “route → controller → view → assets (Tailwind/Alpine/Vite)” for the top pages (/admin, /assignments, /quizzes, /results) so you can show the end-to-end connection in your presentation.
